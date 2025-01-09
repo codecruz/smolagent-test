@@ -1,0 +1,42 @@
+# Ignorar archivos de entorno virtual
+venv/
+.env/
+.envrc/
+
+# Ignorar archivos de configuración sensible
+.env
+*.env
+
+# Ignorar archivos de Python compilados
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ignorar archivos de caché de Python
+.pytest_cache/
+.mypy_cache/
+
+# Ignorar archivos de configuración de IDE
+.vscode/
+.idea/
+
+# Ignorar archivos de base de datos y logs
+*.db
+*.sqlite3
+*.log
+
+# Ignorar archivos de distribución y build
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Ignorar archivos de Jupyter Notebook
+.ipynb_checkpoints/
+
+# Ignorar archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Ignorar archivos de caché de Tailwind CSS (si los usas)
+.tailwindcss/

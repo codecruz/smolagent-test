@@ -45,7 +45,7 @@ def format_content(content):
             continue
 
         # Formatear como párrafo
-        formatted_content += f'<p class="text-white mb-2">{line}</p>'
+        formatted_content += f'<p class="text-black mb-2">{line}</p>'
 
     # Cerrar la lista si aún está abierta
     if in_list:

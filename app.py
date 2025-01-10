@@ -2,6 +2,8 @@ from flask import Flask, request, render_template_string
 from smolagents import CodeAgent, DuckDuckGoSearchTool, HfApiModel
 from dotenv import load_dotenv
 import os
+from flask import redirect
+
 
 # Importar la función format_content desde formatters.py
 from formatters import format_content
@@ -51,15 +53,20 @@ HTML = '''
 <body class="bg-gray-100">
     <div class="flex flex-col h-screen">
         <!-- Cabecera -->
-        <div class="bg-white shadow-md p-4">
-            <h1 class="text-2xl font-bold text-center">Chat Interactivo</h1>
-        </div>
+<div class="bg-white shadow-md p-4 flex justify-between items-center">
+    <h1 class="text-2xl font-bold text-center">Chat Interactivo</h1>
+    <form method="POST" action="/clear-history">
+        <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">
+            Limpiar historial
+        </button>
+    </form>
+</div>
 
         <!-- Historial de la conversación -->
         <div id="chat-history" class="flex-1 overflow-y-auto p-6 space-y-4">
             {% for entry in history %}
                 <div class="flex {% if entry.role == 'Usuario' %}justify-end{% else %}justify-start{% endif %}">
-                    <div class="{% if entry.role == 'Usuario' %}bg-blue-500 text-white{% else %}bg-gray-200 text-gray-800{% endif %} rounded-lg p-3 max-w-2xl">
+                    <div class="{% if entry.role == 'Usuario' %}bg-blue-500 text-white{% else %}bg-gray-200 text-black{% endif %} rounded-lg p-3 max-w-2xl">
                         <strong>{{ entry.role }}:</strong> 
                         <div class="mt-1">
                             {{ format_content(entry.content)|safe }}
@@ -73,7 +80,7 @@ HTML = '''
         <div class="bg-white shadow-lg p-4">
             <form method="POST" class="flex space-x-2">
                 <input type="text" name="question" placeholder="Escribe tu pregunta aquí..." 
-                       class="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    class="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
                 <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
                     Enviar
                 </button>
@@ -86,9 +93,40 @@ HTML = '''
         const chatHistory = document.getElementById('chat-history');
         chatHistory.scrollTop = chatHistory.scrollHeight;
     </script>
+    <!-- Script para manejar la limpieza del historial -->
+<script>
+    function clearHistory() {
+        fetch('/clear-history', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => {
+            if (response.ok) {
+                // Limpiar el historial en la interfaz
+                const chatHistory = document.getElementById('chat-history');
+                chatHistory.innerHTML = '';
+            } else {
+                console.error('Error al limpiar el historial');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+</script>
 </body>
 </html>
 '''
+
+
+@app.route('/clear-history', methods=['POST'])
+def clear_history():
+    global conversation_history
+    conversation_history = []  # Limpiar el historial
+    return redirect('/')  # Redirigir a la página principal
+
 
 def build_context(history):
     """
@@ -99,6 +137,7 @@ def build_context(history):
         context += f"{entry['role']}: {entry['content']}\n"
     return context
 
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     global conversation_history
@@ -106,29 +145,30 @@ def index():
 
     if request.method == 'POST':
         question = request.form['question']
-        
+
         # Agregar la pregunta al historial
         conversation_history.append({"role": "Usuario", "content": question})
-        
+
         # Limitar el historial a un máximo de entradas
         if len(conversation_history) > MAX_HISTORY_LENGTH:
             conversation_history = conversation_history[-MAX_HISTORY_LENGTH:]
-        
+
         # Construir el contexto de la conversación
         context = build_context(conversation_history)
-        
+
         # Ejecutar la pregunta con el historial como contexto
         full_query = f"{context}\nAgente: Responde en español. {question}"
         answer = agent.run(full_query)
-        
+
         # Agregar la respuesta al historial
         conversation_history.append({"role": "Agente", "content": answer})
-        
+
         # Limitar el historial nuevamente (por si acaso)
         if len(conversation_history) > MAX_HISTORY_LENGTH:
             conversation_history = conversation_history[-MAX_HISTORY_LENGTH:]
 
     return render_template_string(HTML, answer=answer, history=conversation_history, format_content=format_content)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
